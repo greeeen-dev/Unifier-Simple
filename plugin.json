@@ -1,16 +1,17 @@
 {
-  "id": "template",
-  "name": "Plugin Template",
-  "description": "This is a template for Unifier plugins.",
+  "id": "simple",
+  "name": "Simple",
+  "description": "This plugin serves as a dependency as it helps make developer life easier. By ItsAsheer",
   "version": "v1.0.0",
   "release": 0,
   "minimum": 36,
   "services": [],
-  "requirements": [],
-  "shutdown": false,
+  "requirements": ["requests"],
+  "shutdown": true,
   "modules": [
-    "template.py"
+    "simple.py"
   ],
   "utils": [
+    "simple_check.py"
   ]
 }
