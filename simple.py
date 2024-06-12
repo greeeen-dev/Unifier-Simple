@@ -22,12 +22,12 @@ import time
 import json
 
 
-class SimpleCore(package="simple"):
+class SimpleCore:
+    def __init__(self, bot):
+        self.bot = bot
 
-
-
-    async  def get_guild_by_id(self, id):
-        guild = await self.bot.get_guild(id)
+    async def get_guild_by_id(self, id):
+        guild = self.bot.get_guild(id)
         return guild
 
     async def user_has_role(self, user_id, role_id, guild_id):
@@ -49,64 +49,64 @@ class SimpleCore(package="simple"):
         guild = self.bot.get_guild(self.bot.config['home_guild'])
         ch = guild.get_channel(self.bot.config['logs_channel'])
         if is_embed:
-            ch.send(embed=message)
+            await ch.send(embed=message)
         else:
-            ch.send(message)
+            await ch.send(message)
 
-    async def globanban(self, userid, duration=0):
+    async def global_ban(self, user_id, duration=0):
         banlist = self.bot.db['banned']
-        if userid in banlist:
+        if user_id in banlist:
             raise ValueError("User Already Banned!")
-        ct = round(time.time())
-        nt = ct + duration
-        self.bot.db['banned'].update({f'{userid}': nt})
+        current_time = round(time.time())
+        end_time = current_time + duration
+        self.bot.db['banned'].update({str(user_id): end_time})
         return True
 
-    async def systemmsg(self, message, room):
+    async def system_message(self, message, room):
         await self.bot.bridge.send(room, message, 'discord', system=True)
         for platform in self.bot.config['external']:
             await self.bot.bridge.send(room, message, platform, system=True)
         return True
 
 
-def genembed(text, style="default", package="getfromconfig"):
+def gen_embed(text, style="default", package="getfromconfig"):
     with open('config.json', 'r') as file:
         data = json.load(file)
     if package == "getfromconfig":
-       package = data['package']
-       package = package.title()
+        package = data['package']
+        package = package.title()
     if style == "default":
-       embed = nextcord.Embed(
-           title=f"{package}",
-           description=text,
-           color=nextcord.Color.blurple(),
-       )
-    if style == "success":
-       embed = nextcord.Embed(
-           title=f"{package}: Success",
-           description=text,
-           color=nextcord.Color.green(),
-       )
-    if style == "error":
-       embed = nextcord.Embed(
-           title=f"{package}: Error",
-           description=text,
-           color=nextcord.Color.brand_red(),
-       )
+        embed = nextcord.Embed(
+            title=f"{package}",
+            description=text,
+            color=nextcord.Color.blurple(),
+        )
+    elif style == "success":
+        embed = nextcord.Embed(
+            title=f"{package}: Success",
+            description=text,
+            color=nextcord.Color.green(),
+        )
+    elif style == "error":
+        embed = nextcord.Embed(
+            title=f"{package}: Error",
+            description=text,
+            color=nextcord.Color.red(),
+        )
     return embed
 
-    running = True
 
 class Simple(commands.Cog):
-
-    def __init__(self,bot):
+    def __init__(self, bot):
         self.bot = bot
-        self.bot.simple = SimpleCore(self)
-
+        self.bot.simple = SimpleCore(bot)
+        self.bot.simple.running = True
+        self.bot.simple.version = [1, "v0.0.1"]
 
     @commands.command()
-    async def simple(self,ctx):
+    async def simple(self, ctx):
         await ctx.send('Running Simple v0.0.1!')
+
 
 def setup(bot):
     bot.add_cog(Simple(bot))
