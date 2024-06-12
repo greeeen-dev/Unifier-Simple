@@ -72,28 +72,28 @@ class SimpleCore(package="simple"):
 def genembed(text, style="default", package="getfromconfig"):
     with open('config.json', 'r') as file:
         data = json.load(file)
-       if package == "getfromconfig":
-           package = data['package']
-           package = package.title()
-       if style == "default":
-           embed = nextcord.Embed(
-               title=f"{package}",
-               description=text,
-               color=nextcord.Color.blurple(),
-           )
-       if style == "success":
-           embed = nextcord.Embed(
-               title=f"{package}: Success",
-               description=text,
-               color=nextcord.Color.green(),
-           )
-       if style == "error":
-           embed = nextcord.Embed(
-               title=f"{package}: Error",
-               description=text,
-               color=nextcord.Color.brand_red(),
-           )
-       return embed
+    if package == "getfromconfig":
+       package = data['package']
+       package = package.title()
+    if style == "default":
+       embed = nextcord.Embed(
+           title=f"{package}",
+           description=text,
+           color=nextcord.Color.blurple(),
+       )
+    if style == "success":
+       embed = nextcord.Embed(
+           title=f"{package}: Success",
+           description=text,
+           color=nextcord.Color.green(),
+       )
+    if style == "error":
+       embed = nextcord.Embed(
+           title=f"{package}: Error",
+           description=text,
+           color=nextcord.Color.brand_red(),
+       )
+    return embed
 
     running = True
 
