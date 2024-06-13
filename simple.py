@@ -105,7 +105,12 @@ class Simple(commands.Cog):
 
     @commands.command()
     async def simple(self, ctx):
-        await ctx.send('Running Simple v0.0.1!')
+        embed = nextcord.Embed(
+            title="Simple v0.0.1",
+            description="By ItsAsheer.",
+            color=nextcord.Color.red()
+        )
+        await ctx.send(embed=embed)
 
 
 def setup(bot):
