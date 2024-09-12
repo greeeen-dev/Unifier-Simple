@@ -20,6 +20,9 @@ import nextcord
 from nextcord.ext import commands
 import time
 import json
+import os
+import re
+import subprocess
 
 
 class SimpleCore:
@@ -94,6 +97,111 @@ def gen_embed(text, style="default", package="getfromconfig"):
             color=nextcord.Color.red(),
         )
     return embed
+
+
+def install_plugin(bot, url):
+    # Normalize URL
+    if url.endswith('/'):
+        url = url[:-1]
+    if not url.endswith('.git'):
+        url = url + '.git'
+
+    # Clean up any existing plugin installation
+    subprocess.run(['rm', '-rf', os.path.join(os.getcwd(), 'plugin_install')], check=True)
+
+    # Clone the repository
+    subprocess.run(['git', 'clone', url, os.path.join(os.getcwd(), 'plugin_install')], check=True)
+
+    try:
+        with open('plugin_install/plugin.json', 'r') as file:
+            new = json.load(file)
+        
+        if not bool(re.match("^[a-z0-9_-]*$", new['id'])):
+            print('Invalid plugin.json file: Plugin IDs must be alphanumeric and may only contain lowercase letters, numbers, dashes, and underscores.')
+            return
+        
+        if f"{new['id']}.json" in os.listdir('plugins'):
+            with open(f'plugins/{new["id"]}.json', 'r') as file:
+                current = json.load(file)
+            print(f'Plugin already installed!\n\nName: `{current["name"]}`\nVersion: `{current["version"]}`')
+            return
+
+        plugin_id = new['id']
+        name = new['name']
+        desc = new['description']
+        version = new['version']
+        minimum = new['minimum']
+        modules = new['modules']
+        utilities = new['utils']
+        services = new.get('services', [])
+
+        with open('plugins/system.json', 'r') as file:
+            vinfo = json.load(file)
+
+        if vinfo['release'] < minimum:
+            print(f'Failed to install plugin: Your system does not support this plugin. Release `{minimum}` or later is required.')
+            return
+
+        conflicts = []
+        for module in modules:
+            if module in os.listdir('cogs'):
+                conflicts.append('cogs/' + module)
+        for util in utilities:
+            if util in os.listdir('utils'):
+                conflicts.append('utils/' + util)
+        if f'{plugin_id}.json' in os.listdir('emojis') and 'emojis' in services:
+            conflicts.append(f'emojis/{plugin_id}.json')
+        if conflicts:
+            print('Conflicting files were found:\n' + '\n'.join(f'\n`{conflict}`' for conflict in conflicts))
+            return
+
+        # Proceed with installation
+        try:
+            if 'requirements' in new:
+                print('Installing dependencies')
+                newdeps = new['requirements']
+                if newdeps:
+                    print('Installing: ' + ' '.join(newdeps))
+                    subprocess.run(['python3', '-m', 'pip', 'install', '--no-dependencies'] + newdeps, check=True)
+
+            print('Installing Plugin')
+            for module in modules:
+                subprocess.run(['cp', os.path.join(os.getcwd(), 'plugin_install', module), os.path.join(os.getcwd(), 'cogs', module)], check=True)
+            for util in utilities:
+                subprocess.run(['cp', os.path.join(os.getcwd(), 'plugin_install', util), os.path.join(os.getcwd(), 'utils', util)], check=True)
+
+            if 'emojis' in services:
+                print('Installing Emoji Pack')
+                home_guild = bot.get_guild(bot.config['home_guild'])
+                with open('plugin_install/emoji.json', 'r') as file:
+                    emojipack = json.load(file)
+                for emojiname in list(emojipack['emojis'].keys()):
+                    file = os.path.join('plugin_install', 'emojis', emojipack['emojis'][emojiname][0])
+                    with open(file, 'rb') as img:
+                        emoji = home_guild.create_custom_emoji(name=emojiname, image=img.read())
+                    emojipack['emojis'][emojiname][0] = f'<a:{emoji.name}:{emoji.id}>' if emoji.animated else f'<:{emoji.name}:{emoji.id}>'
+                emojipack['installed'] = True
+                with open(f'emojis/{plugin_id}.json', 'w+') as file:
+                    json.dump(emojipack, file, indent=2)
+
+            print('Registering plugin')
+            subprocess.run(['cp', os.path.join(os.getcwd(), 'plugin_install', 'plugin.json'), os.path.join(os.getcwd(), 'plugins', f'{plugin_id}.json')], check=True)
+            with open(f'plugins/{plugin_id}.json') as file:
+                plugin_info = json.load(file)
+                plugin_info.update({'repository': url})
+            with open(f'plugins/{plugin_id}.json', 'w') as file:
+                json.dump(plugin_info, file)
+
+            print('Activating extensions')
+            for module in modules:
+                modname = 'cogs.' + module[:-3]
+                bot.load_extension(modname)
+            
+            print('Installation complete')
+        except Exception as e:
+            print(f'Install failed: {e}')
+            return
+
 
 
 class Simple(commands.Cog):
