@@ -1,4 +1,4 @@
-"""
+
 """
 Simple - A simple plugin to make dev life easier.
 Copyright (C) 2024 ItsAsheer
